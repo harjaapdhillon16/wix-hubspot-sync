@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": { "noEmit": true, "types": ["node"] },
+  "include": ["src/server/**/*.ts", "src/shared/**/*.ts", "dev/**/*.ts", "test/**/*.ts"]
+}
