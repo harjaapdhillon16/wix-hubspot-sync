@@ -14,8 +14,14 @@ export function createApp(ctx: AppContext) {
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
 
-  app.use((_req, res, next) => {
+  app.use((req, res, next) => {
     res.set({ 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin' });
+    // Wix JSON-escapes embedded-script parameters ("https:\/\/host\/public\/…") and browsers turn
+    // each backslash into a slash, so script/beacon requests arrive as "//public//…". Collapse them.
+    // (Webhook URLs are configured directly and never contain these, so signatures are unaffected.)
+    const q = req.url.indexOf('?');
+    const path = q === -1 ? req.url : req.url.slice(0, q);
+    if (path.includes('//')) req.url = path.replace(/\/{2,}/g, '/') + (q === -1 ? '' : req.url.slice(q));
     next();
   });
 

@@ -4,3 +4,7 @@ data
 .env
 *.db
 *.db-*
+hubspot.config.yml
+.hscli
+deploy/secrets.env
+.claude/

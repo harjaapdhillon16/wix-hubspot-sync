@@ -15,6 +15,8 @@
   var siteKey = me && me.getAttribute('data-site-key');
   var endpoint = me && me.getAttribute('data-endpoint');
   if (!siteKey || !endpoint) return;
+  // Wix JSON-escapes embedded-script parameters ("https:\/\/host\/path").
+  endpoint = endpoint.replace(/\\\//g, '/');
 
   var UTM = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
   var FIRST = 'whs_first_touch';

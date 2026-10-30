@@ -22,6 +22,7 @@ export function webhookRouter(ctx: AppContext) {
       log.warn('rejected wix webhook', { err });
       return void res.status(401).send('invalid signature');
     }
+    log.info('wix webhook', { events: events.map((e) => ({ type: e.type, identityType: e.identity?.identityType ?? null, identityKeys: Object.keys(e.identity ?? {}) })) });
     for (const e of events) {
       if (e.eventId && !store.markEventProcessed(`wix:${e.eventId}`)) continue;
       const inst = store.getInstallation(e.instanceId);
@@ -58,7 +59,10 @@ export function webhookRouter(ctx: AppContext) {
       signature: req.get('x-hubspot-signature-v3'),
       timestamp: req.get('x-hubspot-request-timestamp'),
     });
-    if (!ok) return void res.status(401).send('invalid signature');
+    if (!ok) {
+      log.warn('rejected hubspot webhook', { hasSignature: !!req.get('x-hubspot-signature-v3'), uri: req.originalUrl });
+      return void res.status(401).send('invalid signature');
+    }
 
     let events: HubSpotWebhookEvent[];
     try {
@@ -66,6 +70,7 @@ export function webhookRouter(ctx: AppContext) {
     } catch {
       return void res.status(400).send('bad json');
     }
+    log.info('hubspot webhook', { events: (Array.isArray(events) ? events : []).map((e) => ({ type: e.subscriptionType, changeSource: e.changeSource, sourceId: e.sourceId, appId: e.appId })) });
     const echoed = new Set<string>();
     for (const e of Array.isArray(events) ? events : []) {
       if (!store.markEventProcessed(`hs:${e.eventId}`)) continue;
@@ -78,10 +83,12 @@ export function webhookRouter(ctx: AppContext) {
           }
           continue;
         }
-        if (e.subscriptionType === 'contact.creation' || e.subscriptionType === 'contact.propertyChange') {
+        // Classic "contact.*" events, or the platform's "object.*" events for contacts (objectTypeId 0-1).
+        const type = e.subscriptionType.startsWith('object.') && e.objectTypeId === '0-1' ? e.subscriptionType.replace('object.', 'contact.') : e.subscriptionType;
+        if (type === 'contact.creation' || type === 'contact.propertyChange') {
           // Debounce: HubSpot sends one event per changed property.
           queue.enqueue('reconcile', { instanceId: inst.instanceId, hubspotContactId: objectId, trigger: 'hubspot' }, { instanceId: inst.instanceId, dedupeKey: reconcileKey(inst.instanceId, 'hs', objectId), delayMs: cfg.WEBHOOK_DEBOUNCE_MS });
-        } else if (e.subscriptionType === 'contact.deletion' || e.subscriptionType === 'contact.privacyDeletion') {
+        } else if (type === 'contact.deletion' || type === 'contact.privacyDeletion') {
           store.deleteLink(inst.instanceId, 'hubspot', objectId);
         }
       }

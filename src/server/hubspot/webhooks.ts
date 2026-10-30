@@ -45,6 +45,7 @@ export interface HubSpotWebhookEvent {
   changeSource?: string;
   sourceId?: string;
   appId?: number;
+  objectTypeId?: string; // platform object.* events
 }
 
 /**

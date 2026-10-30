@@ -1,0 +1,4 @@
+35-255-45-101.sslip.io {
+	encode gzip
+	reverse_proxy app:3000
+}

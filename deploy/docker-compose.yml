@@ -1,0 +1,16 @@
+# Runs on the VM in /opt/wix-hubspot. Caddy terminates HTTPS (automatic Let's Encrypt cert
+# for the sslip.io hostname) and proxies to the app. SQLite lives on the VM's persistent disk.
+services:
+  app:
+    image: wix-hubspot-sync:latest
+    restart: unless-stopped
+    env_file: [public.env, secrets.env]
+    volumes: ["./data:/data"]
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddy_data:/data"]
+    depends_on: [app]
+volumes:
+  caddy_data:

@@ -247,3 +247,15 @@ describe('conflicts, mapping, security, forms', () => {
     expect((await s.api('GET', '/status')).body.stats.linkedContacts).toBe(2);
   });
 });
+
+describe('Wix embedded-script parameter escaping', () => {
+  it('serves the script and accepts beacons on the doubled-slash paths browsers produce from "\\/"', async () => {
+    const s = await startStack();
+    try {
+      expect((await fetch(`${s.cfg.APP_BASE_URL}//public//attribution.js`)).status).toBe(200);
+      expect((await fetch(`${s.cfg.APP_BASE_URL}//public//attribution`, { method: 'POST', body: '{}' })).status).toBe(400); // reached the route (body invalid)
+    } finally {
+      await s.stop();
+    }
+  });
+});
